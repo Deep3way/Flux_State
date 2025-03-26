@@ -1,3 +1,6 @@
+/// FluxState: A lightweight, reactive state management library for Flutter.
+/// Exports core components for state management, dependency injection,
+/// navigation, and persistence.
 library fluxstate;
 
 export 'src/core.dart' show Flux, FluxBuilder;

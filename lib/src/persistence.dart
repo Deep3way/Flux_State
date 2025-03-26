@@ -1,23 +1,25 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:fluxstate/fluxstate.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:typed_data';
 
+/// Persistence utilities for saving and loading [Flux] state.
 class FluxPersist {
   static final Map<String, dynamic> _cache = {};
-  static const String _versionKey = "fluxstate_version";
   static const int _currentVersion = 1;
   static final List<_PendingWrite> _writeQueue = [];
   static bool _isProcessingQueue = false;
   static Uint8List? _encryptionKey;
 
+  /// Initializes encryption with a [key] hashed to a 32-byte key.
   static void initEncryption(String key) {
     _encryptionKey = Uint8List.fromList(sha256.convert(utf8.encode(key)).bytes);
   }
 
+  /// Saves a [state]’s value to persistent storage.
   static Future<void> save<T>(
       Flux<T> state,
       String key, {
@@ -38,7 +40,8 @@ class FluxPersist {
     } else if (toJson != null) {
       serialized = toJson(value);
     } else {
-      throw UnsupportedError("Type $T is not supported without a toJson function");
+      throw UnsupportedError(
+          "Type $T is not supported without a toJson function");
     }
 
     if (encrypt && _encryptionKey != null) {
@@ -57,6 +60,7 @@ class FluxPersist {
     }
   }
 
+  /// Loads a value into a [state] from persistent storage.
   static Future<void> load<T>(
       Flux<T> state,
       String key, {
@@ -99,6 +103,9 @@ class FluxPersist {
     }
   }
 
+
+
+  /// Saves a [state]’s value to a file.
   static Future<void> saveToFile<T>(
       Flux<T> state,
       String fileName, {
@@ -107,7 +114,8 @@ class FluxPersist {
       }) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$fileName');
-    String serialized = toJson != null ? toJson(state.value) : state.value.toString();
+    String serialized =
+    toJson != null ? toJson(state.value) : state.value.toString();
 
     if (encrypt && _encryptionKey != null) {
       serialized = _encrypt(serialized);
@@ -116,6 +124,7 @@ class FluxPersist {
     await file.writeAsString(serialized);
   }
 
+  /// Loads a value from a file into a [state].
   static Future<void> loadFromFile<T>(
       Flux<T> state,
       String fileName, {
@@ -138,6 +147,7 @@ class FluxPersist {
     state.value = fromJson != null ? fromJson(serialized) : serialized as T;
   }
 
+  /// Processes the batch write queue asynchronously.
   static Future<void> _processQueue() async {
     if (_isProcessingQueue) return;
     _isProcessingQueue = true;
@@ -151,23 +161,37 @@ class FluxPersist {
     _isProcessingQueue = false;
   }
 
+  /// Writes a [value] to storage under a [key].
+  static Future<void> _writeToStorage(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_versionedKey(key), value);
+  }
+
+  /// Prepends the version to a [key] for versioning support.
   static String _versionedKey(String key) => "$_currentVersion:$key";
 
+  /// Encrypts [data] using a simple XOR with the encryption key.
   static String _encrypt(String data) {
     if (_encryptionKey == null) return data;
     final bytes = utf8.encode(data);
-    final encrypted = bytes.map((b) => b ^ _encryptionKey![b % _encryptionKey!.length]).toList();
+    final encrypted = bytes
+        .map((b) => b ^ _encryptionKey![b % _encryptionKey!.length])
+        .toList();
     return base64Encode(encrypted);
   }
 
+  /// Decrypts [data] using the same XOR method.
   static String _decrypt(String data) {
     if (_encryptionKey == null) return data;
     final bytes = base64Decode(data);
-    final decrypted = bytes.map((b) => b ^ _encryptionKey![b % _encryptionKey!.length]).toList();
+    final decrypted = bytes
+        .map((b) => b ^ _encryptionKey![b % _encryptionKey!.length])
+        .toList();
     return utf8.decode(decrypted);
   }
 }
 
+/// Represents a pending write operation for batch processing.
 class _PendingWrite {
   final String key;
   final String value;

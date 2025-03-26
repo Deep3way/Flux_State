@@ -8,19 +8,29 @@ void main() async {
   runApp(MyApp());
 }
 
+/// A simple user model for authentication state.
 class User {
   final String name;
   final int age;
+
   User(this.name, this.age);
+
+  /// Serializes the user to a JSON string.
   String toJson() => jsonEncode({'name': name, 'age': age});
+
+  /// Deserializes a JSON string to a [User] instance.
   static User fromJson(String json) => User(jsonDecode(json)['name'], jsonDecode(json)['age']);
 }
 
+/// Manages user authentication state.
 class AuthService {
   final user = Flux<User>(User("Guest", 0), onInit: () => print("AuthService init")).obs;
+
+  /// Logs in a user with a given [name].
   void login(String name) => user.value = User(name, 25);
 }
 
+/// A secondary page demonstrating navigation.
 class SecondPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -36,6 +46,7 @@ class SecondPage extends StatelessWidget {
   }
 }
 
+/// The main application widget.
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -43,6 +54,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// The home page demonstrating FluxState features.
 class MyHomePage extends StatefulWidget {
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -79,11 +91,14 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             FluxBuilder(state: counter, builder: (context, value) => Text("Count: $value")),
             FluxBuilder(state: doubledCounter, builder: (context, value) => Text("Doubled: $value")),
-            FluxBuilder(state: authService.user, builder: (context, value) => Text("User: ${value?.name}, ${value?.age}")),
+            FluxBuilder(
+              state: authService.user,
+              builder: (context, User value) => Text("User: ${value.name}, ${value.age}"),
+            ),
             ElevatedButton(
               onPressed: () {
                 authService.login("Alice");
-                FluxPersist.save(authService.user, "user", toJson: (u) => u?.toJson(), encrypt: true, batch: true);
+                FluxPersist.save(authService.user, "user", toJson: (User u) => u.toJson(), encrypt: true, batch: true);
               },
               child: Text("Login as Alice (Encrypted, Batched)"),
             ),
@@ -93,9 +108,11 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             ElevatedButton(
               onPressed: () {
-                counter.revert(counter.history.length - 2);
-                FluxPersist.save(counter, "counter", cache: true);
-                FluxPersist.saveToFile(counter, "counter_backup");
+                if (counter.history.length >= 2) {
+                  counter.revert(counter.history.length - 2);
+                  FluxPersist.save(counter, "counter", cache: true);
+                  FluxPersist.saveToFile(counter, "counter_backup");
+                }
               },
               child: Text("Undo Last Change"),
             ),
