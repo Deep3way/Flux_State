@@ -6,6 +6,9 @@
 ```markdown
 # Changelog
 
+## 1.2.0
+- Improved library structure and code quality
+
 ## 1.1.0
 - Added advanced persistence: caching, batching, file storage, encryption, versioning.
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:crypto/crypto.dart';
 import 'package:fluxstate/fluxstate.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,13 +22,13 @@ class FluxPersist {
 
   /// Saves a [state]’s value to persistent storage.
   static Future<void> save<T>(
-      Flux<T> state,
-      String key, {
-        String Function(T)? toJson,
-        bool cache = true,
-        bool encrypt = false,
-        bool batch = false,
-      }) async {
+    Flux<T> state,
+    String key, {
+    String Function(T)? toJson,
+    bool cache = true,
+    bool encrypt = false,
+    bool batch = false,
+  }) async {
     final value = state.value;
     String? serialized;
 
@@ -62,13 +63,13 @@ class FluxPersist {
 
   /// Loads a value into a [state] from persistent storage.
   static Future<void> load<T>(
-      Flux<T> state,
-      String key, {
-        T? defaultValue,
-        T Function(String)? fromJson,
-        bool useCache = true,
-        bool decrypt = false,
-      }) async {
+    Flux<T> state,
+    String key, {
+    T? defaultValue,
+    T Function(String)? fromJson,
+    bool useCache = true,
+    bool decrypt = false,
+  }) async {
     String? serialized;
 
     if (useCache && _cache.containsKey(key)) {
@@ -99,23 +100,22 @@ class FluxPersist {
     } else if (fromJson != null) {
       state.value = fromJson(serialized);
     } else {
-      throw UnsupportedError("Type $T is not supported without a fromJson function");
+      throw UnsupportedError(
+          "Type $T is not supported without a fromJson function");
     }
   }
 
-
-
   /// Saves a [state]’s value to a file.
   static Future<void> saveToFile<T>(
-      Flux<T> state,
-      String fileName, {
-        String Function(T)? toJson,
-        bool encrypt = false,
-      }) async {
+    Flux<T> state,
+    String fileName, {
+    String Function(T)? toJson,
+    bool encrypt = false,
+  }) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$fileName');
     String serialized =
-    toJson != null ? toJson(state.value) : state.value.toString();
+        toJson != null ? toJson(state.value) : state.value.toString();
 
     if (encrypt && _encryptionKey != null) {
       serialized = _encrypt(serialized);
@@ -126,12 +126,12 @@ class FluxPersist {
 
   /// Loads a value from a file into a [state].
   static Future<void> loadFromFile<T>(
-      Flux<T> state,
-      String fileName, {
-        T Function(String)? fromJson,
-        T? defaultValue,
-        bool decrypt = false,
-      }) async {
+    Flux<T> state,
+    String fileName, {
+    T Function(String)? fromJson,
+    T? defaultValue,
+    bool decrypt = false,
+  }) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$fileName');
     if (!await file.exists()) {

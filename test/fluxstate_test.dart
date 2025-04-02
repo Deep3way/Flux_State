@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fluxstate/fluxstate.dart';
-import 'dart:io';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,21 +14,20 @@ void main() {
     final prefsStorage = <String, String>{};
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(prefsChannel, (call) async {
+      final args = call.arguments as Map;
+      final key = args['key'] as String;
+
       if (call.method == 'setString') {
-        final args = call.arguments as Map;
-        final key = args['key'] as String;
         final value = args['value'] as String;
-        print("Channel setString: $key = $value");
         prefsStorage[key] = value;
+        print("Channel setString: $key = $value");
         return true;
       } else if (call.method == 'getString') {
-        final key = call.arguments['key'] as String;
         print("Channel getString: $key");
-        if (key == '1:counter') return "5"; // Match FluxPersist key
+        if (prefsStorage.containsKey(key)) return prefsStorage[key];
+        if (key == '1:counter') return "5";
         if (key == '1:user') return jsonEncode({"name": "Alice", "age": 25});
-        if (key == '1:key1') return "1";
-        if (key == '1:key2') return "2";
-        return prefsStorage[key];
+        return null;
       }
       return null;
     });
@@ -104,14 +104,14 @@ void main() {
 
   group('FluxState', () {
     test('injects and finds services', () {
-      final service = "TestService";
+      const service = "TestService";
       FluxState.inject(service);
       expect(FluxState.find<String>(), "TestService");
     });
 
     test('scoped services work independently', () {
-      final service1 = "Scope1Service";
-      final service2 = "Scope2Service";
+      const service1 = "Scope1Service";
+      const service2 = "Scope2Service";
       FluxState.injectScoped(service1, "scope1");
       FluxState.injectScoped(service2, "scope2");
       expect(FluxState.findScoped<String>("scope1"), "Scope1Service");
@@ -127,18 +127,24 @@ void main() {
     testWidgets('saves and loads int with cache', (WidgetTester tester) async {
       final flux = Flux<int>(0);
       await FluxPersist.save(flux, "counter", cache: true);
-      await tester.pump(Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
       await FluxPersist.load(flux, "counter", defaultValue: 0, useCache: false);
-      await tester.pump(Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
       expect(flux.value, 5);
     });
 
-    testWidgets('saves and loads custom type with encryption', (WidgetTester tester) async {
+    testWidgets('saves and loads custom type with encryption',
+        (WidgetTester tester) async {
       final flux = Flux<User>(User("Guest", 0));
-      await FluxPersist.save(flux, "user", toJson: (User u) => u.toJson(), encrypt: false);
-      await tester.pump(Duration(milliseconds: 100));
-      await FluxPersist.load(flux, "user", fromJson: User.fromJson, defaultValue: User("Guest", 0), decrypt: false, useCache: false);
-      await tester.pump(Duration(milliseconds: 100));
+      await FluxPersist.save(flux, "user",
+          toJson: (User u) => u.toJson(), encrypt: false);
+      await tester.pump(const Duration(milliseconds: 100));
+      await FluxPersist.load(flux, "user",
+          fromJson: User.fromJson,
+          defaultValue: User("Guest", 0),
+          decrypt: false,
+          useCache: false);
+      await tester.pump(const Duration(milliseconds: 100));
       expect(flux.value.name, "Alice");
       expect(flux.value.age, 25);
     });
@@ -149,10 +155,10 @@ void main() {
 
       await FluxPersist.save(flux1, "key1", batch: true);
       await FluxPersist.save(flux2, "key2", batch: true);
-      await tester.pump(Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
       await FluxPersist.load(flux1, "key1", defaultValue: 0, useCache: false);
       await FluxPersist.load(flux2, "key2", defaultValue: 0, useCache: false);
-      await tester.pump(Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
       expect(flux1.value, 1);
       expect(flux2.value, 2);
     });
@@ -160,11 +166,10 @@ void main() {
     testWidgets('saves and loads from file', (WidgetTester tester) async {
       final flux = Flux<int>(42);
       final tempDir = Directory.systemTemp.createTempSync('flux_test_');
-      final filePath = '${tempDir.path}/test_file';
       await FluxPersist.saveToFile(flux, "test_file"); // Writes to temp dir
-      await tester.pumpAndSettle(Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
       await FluxPersist.loadFromFile(flux, "test_file", defaultValue: 0);
-      await tester.pumpAndSettle(Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
       expect(flux.value, 42);
       tempDir.deleteSync(recursive: true); // Cleanup
     });
@@ -178,5 +183,7 @@ class User {
   User(this.name, this.age);
 
   String toJson() => jsonEncode({'name': name, 'age': age});
-  static User fromJson(String json) => User(jsonDecode(json)['name'], jsonDecode(json)['age']);
+
+  static User fromJson(String json) =>
+      User(jsonDecode(json)['name'], jsonDecode(json)['age']);
 }
