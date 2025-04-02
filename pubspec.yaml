@@ -1,6 +1,6 @@
 name: fluxstate
 description: A revolutionary, simple, and powerful state management library for Flutter with advanced persistence.
-version: 1.2.0
+version: 1.3.0
 homepage: https://github.com/Deep3way/Flux_State
 repository: https://github.com/Deep3way/Flux_State
 issue_tracker: https://github.com/Deep3way/Flux_State/issues

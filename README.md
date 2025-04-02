@@ -20,7 +20,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  fluxstate: ^1.2.0
+  fluxstate: ^1.3.0
 ```
 
 Run:
